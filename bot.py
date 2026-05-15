@@ -228,3 +228,50 @@ Antworte auf Deutsch. Kurz, direkt, klar."""
 async def auto_briefing(context: ContextTypes.DEFAULT_TYPE):
     hour = datetime.utcnow().hour
     briefing_type = "Mittags-Briefing" if hour == 10 else "Abend-Briefing"
+    try:
+        data = await get_prices()
+        briefing = await generate_briefing(briefing_type, format_prices_text(data))
+        await context.bot.send_message(chat_id=CHAT_ID, text=briefing)
+    except Exception as e:
+        await context.bot.send_message(chat_id=CHAT_ID, text=f"Fehler: {e}")
+
+async def check_tranches(context: ContextTypes.DEFAULT_TYPE):
+    if not tranches:
+        return
+    try:
+        data = await get_prices()
+        alerts = []
+        for t in tranches:
+            coin_id = next((k for k, v in COINS.items() if v == t['coin']), None)
+            if not coin_id:
+                continue
+            current = data.get(coin_id, {}).get("usd", 0)
+            target = float(t['target'])
+            if current <= target * 1.02:
+                alerts.append(f"🚨 *{t['coin']}* bei Kaufzone!\nZiel: ${t['target']} | Aktuell: {format_price(current)}\nBetrag: €{t['amount']}")
+        if alerts:
+            await context.bot.send_message(chat_id=CHAT_ID, text="\n\n".join(alerts), parse_mode="Markdown")
+    except:
+        pass
+
+def main():
+    app = Application.builder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("preise", preise))
+    app.add_handler(CommandHandler("mittag", mittag_cmd))
+    app.add_handler(CommandHandler("abend", abend_cmd))
+    app.add_handler(CommandHandler("tranche", tranche_cmd))
+    app.add_handler(CommandHandler("tranchen", tranchen_cmd))
+    app.add_handler(MessageHandler(filters.PHOTO, image_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+
+    job_queue = app.job_queue
+    job_queue.run_daily(auto_briefing, time=datetime.strptime("10:00", "%H:%M").time())
+    job_queue.run_daily(auto_briefing, time=datetime.strptime("18:00", "%H:%M").time())
+    job_queue.run_repeating(check_tranches, interval=1800, first=60)
+
+    print("Bot läuft...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
