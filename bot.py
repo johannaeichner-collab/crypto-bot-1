@@ -1,6 +1,7 @@
 import os
 import aiohttp
 import requests
+import base64
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -22,7 +23,8 @@ COINS = {
     "render-token": "RENDER",
     "vechain": "VET",
     "fetch-ai": "FET",
-    "decentraland": "MANA"
+    "decentraland": "MANA",
+    "chainlink": "LINK"
 }
 
 tranches = []
@@ -71,6 +73,30 @@ def ask_ai(system, user_message):
     )
     return response.json()["choices"][0]["message"]["content"]
 
+def ask_ai_with_image(system, user_message, image_base64, mime_type="image/jpeg"):
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "model": "gpt-4o",
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": [
+                    {"type": "text", "text": user_message},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:{mime_type};base64,{image_base64}"
+                    }}
+                ]}
+            ],
+            "max_tokens": 1000
+        },
+        timeout=60
+    )
+    return response.json()["choices"][0]["message"]["content"]
+
 async def generate_briefing(briefing_type, prices_text):
     tranche_info = ""
     if tranches:
@@ -94,6 +120,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/abend – Abend-Briefing\n"
         "/tranche BTC 75000 500 – Tranche anlegen\n"
         "/tranchen – Alle Tranchen\n\n"
+        "Schick mir ein Bild einer HKCM-Analyse und ich lese sie aus!\n"
         "Oder stell mir einfach eine Frage!"
     )
 
@@ -153,13 +180,41 @@ async def tranchen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
+async def image_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📸 Analysiere Bild...")
+    try:
+        photo = update.message.photo[-1]
+        file = await context.bot.get_file(photo.file_id)
+        img_bytes = await file.download_as_bytearray()
+        image_base64 = base64.b64encode(img_bytes).decode("utf-8")
+
+        data = await get_prices()
+        prices_text = format_prices_text(data)
+        caption = update.message.caption or ""
+
+        user_prompt = f"""Das ist ein Screenshot einer HKCM Krypto-Analyse.
+Lies den gesamten Text aus dem Bild und fasse ihn auf Deutsch zusammen.
+Extrahiere: Coin, Primärszenario, Alternativszenario, Unterstuetzungen, Widerstaende, Handelsmoeglichkeiten.
+Gib dann eine kurze Einschaetzung basierend auf dem aktuellen Kurs.
+
+Aktueller Kurs aus dem Portfolio:
+{prices_text}
+
+{f'Zusatzinfo: {caption}' if caption else ''}"""
+
+        system = "Du bist Johannas Crypto-Assistent. Analysiere HKCM-Screenshots und erklaere sie klar auf Deutsch."
+        reply = ask_ai_with_image(system, user_prompt, image_base64)
+        await update.message.reply_text(reply)
+    except Exception as e:
+        await update.message.reply_text(f"Fehler beim Bildlesen: {e}")
+
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     await update.message.reply_text("Denke nach...")
     try:
         data = await get_prices()
         prices_text = format_prices_text(data)
-        system = f"""Du bist Johannas persönlicher Crypto-Assistent. Sie ist Bauzeichnerin und investiert nebenberuflich in Krypto. Ihre Coins: BTC, ETH, XRP, ADA, LTC, AVAX, HBAR, CRO, POL, RENDER, VET, FET, MANA.
+        system = f"""Du bist Johannas persoenlicher Crypto-Assistent. Sie ist Bauzeichnerin und investiert nebenberuflich in Krypto. Ihre Coins: BTC, ETH, XRP, ADA, LTC, AVAX, HBAR, CRO, POL, RENDER, VET, FET, MANA, LINK.
 
 Aktuelle Preise:
 {prices_text}
@@ -172,50 +227,4 @@ Antworte auf Deutsch. Kurz, direkt, klar."""
 
 async def auto_briefing(context: ContextTypes.DEFAULT_TYPE):
     hour = datetime.utcnow().hour
-    briefing_type = "Mittags-Briefing" if hour == 10 else "Abend-Briefing"
-    try:
-        data = await get_prices()
-        briefing = await generate_briefing(briefing_type, format_prices_text(data))
-        await context.bot.send_message(chat_id=CHAT_ID, text=briefing)
-    except Exception as e:
-        await context.bot.send_message(chat_id=CHAT_ID, text=f"Fehler: {e}")
-
-async def check_tranches(context: ContextTypes.DEFAULT_TYPE):
-    if not tranches:
-        return
-    try:
-        data = await get_prices()
-        alerts = []
-        for t in tranches:
-            coin_id = next((k for k, v in COINS.items() if v == t['coin']), None)
-            if not coin_id:
-                continue
-            current = data.get(coin_id, {}).get("usd", 0)
-            target = float(t['target'])
-            if current <= target * 1.02:
-                alerts.append(f"🚨 *{t['coin']}* bei Kaufzone!\nZiel: ${t['target']} | Aktuell: {format_price(current)}\nBetrag: €{t['amount']}")
-        if alerts:
-            await context.bot.send_message(chat_id=CHAT_ID, text="\n\n".join(alerts), parse_mode="Markdown")
-    except:
-        pass
-
-def main():
-    app = Application.builder().token(TELEGRAM_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("preise", preise))
-    app.add_handler(CommandHandler("mittag", mittag_cmd))
-    app.add_handler(CommandHandler("abend", abend_cmd))
-    app.add_handler(CommandHandler("tranche", tranche_cmd))
-    app.add_handler(CommandHandler("tranchen", tranchen_cmd))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-
-    job_queue = app.job_queue
-    job_queue.run_daily(auto_briefing, time=datetime.strptime("10:00", "%H:%M").time())
-    job_queue.run_daily(auto_briefing, time=datetime.strptime("18:00", "%H:%M").time())
-    job_queue.run_repeating(check_tranches, interval=1800, first=60)
-
-    print("Bot läuft...")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+    briefing_type = "Mittags-Brief​​​​​​​​​​​​​​​​
