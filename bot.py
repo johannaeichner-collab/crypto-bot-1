@@ -140,8 +140,8 @@ async def generate_briefing(briefing_type, prices_text):
     analysen_text = format_analysen()
     analysen_info = f"\n\nGespeicherte HKCM-Analysen:\n{analysen_text}" if analysen_text else ""
 
-   heute = datetime.now().strftime("%d.%m.%Y")
-prompt = f"""Heute ist der {heute}. Aktuelle Kurse:
+    heute = datetime.now().strftime("%d.%m.%Y")
+    prompt = f"""Heute ist der {heute}. Aktuelle Kurse:
 
 {prices_text}
 {tranche_info}
