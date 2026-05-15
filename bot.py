@@ -9,6 +9,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 COINS = {
     "bitcoin": "BTC",
@@ -50,7 +52,7 @@ def format_prices_text(data):
         d = data.get(coin_id, {})
         price = d.get("usd", 0)
         chg = d.get("usd_24h_change", 0)
-        arrow = "↑" if chg >= 0 else "↓"
+        arrow = "up" if chg >= 0 else "down"
         lines.append(f"{sym}: {format_price(price)} {arrow}{abs(chg):.1f}%")
     return "\n".join(lines)
 
@@ -67,7 +69,7 @@ def ask_ai(system, user_message):
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_message}
             ],
-            "max_tokens": 800
+            "max_tokens": 1000
         },
         timeout=30
     )
@@ -97,41 +99,82 @@ def ask_ai_with_image(system, user_message, image_base64, mime_type="image/jpeg"
     )
     return response.json()["choices"][0]["message"]["content"]
 
+def save_analyse(coin, inhalt):
+    datum = datetime.now().strftime("%d.%m.%Y")
+    requests.post(
+        f"{SUPABASE_URL}/rest/v1/Analysen",
+        headers={
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={"Coin": coin, "Inhalt": inhalt, "Datum": datum}
+    )
+
+def get_analysen():
+    response = requests.get(
+        f"{SUPABASE_URL}/rest/v1/Analysen?order=id.desc&limit=20",
+        headers={
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}"
+        }
+    )
+    return response.json()
+
+def format_analysen():
+    analysen = get_analysen()
+    if not analysen or not isinstance(analysen, list):
+        return ""
+    lines = []
+    for a in analysen[:10]:
+        lines.append(f"[{a.get('Datum','')}] {a.get('Coin','')}: {a.get('Inhalt','')[:200]}")
+    return "\n\n".join(lines)
+
 async def generate_briefing(briefing_type, prices_text):
     tranche_info = ""
     if tranches:
         tranche_info = "\n\nAktive Tranchen:\n" + "\n".join(
-            [f"- {t['coin']}: Ziel ${t['target']}, Betrag €{t['amount']}" for t in tranches]
+            [f"- {t['coin']}: Ziel ${t['target']}, Betrag EUR{t['amount']}" for t in tranches]
         )
+
+    analysen_text = format_analysen()
+    analysen_info = f"\n\nGespeicherte HKCM-Analysen:\n{analysen_text}" if analysen_text else ""
+
     prompt = f"""Aktuelle Kurse:
 {prices_text}
 {tranche_info}
+{analysen_info}
 
-Erstelle ein kompaktes {briefing_type} auf Deutsch. Max 150 Wörter. Direkt und klar. Was fällt heute auf?"""
-    system = "Du bist ein Crypto-Assistent. Antworte auf Deutsch, kurz und direkt."
+Erstelle ein kompaktes {briefing_type} auf Deutsch. Max 200 Woerter.
+Beziehe dich auf die HKCM-Analysen wenn vorhanden.
+Erinnere Johanna wenn laut Analyse ein Einstieg oder Ausstieg relevant sein koennte.
+Direkt und klar. Was ist heute wichtig?"""
+
+    system = "Du bist Johannas persoenlicher Crypto-Assistent. Antworte auf Deutsch, kurz und direkt."
     return ask_ai(system, prompt)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Hallo Johanna! Ich bin dein Crypto-Assistent.\n\n"
+        "Hallo Johanna! Ich bin dein Crypto-Assistent.\n\n"
         "Befehle:\n"
-        "/preise – Aktuelle Kurse\n"
-        "/mittag – Mittags-Briefing\n"
-        "/abend – Abend-Briefing\n"
-        "/tranche BTC 75000 500 – Tranche anlegen\n"
-        "/tranchen – Alle Tranchen\n\n"
-        "Schick mir ein Bild einer HKCM-Analyse und ich lese sie aus!\n"
-        "Oder stell mir einfach eine Frage!"
+        "/preise - Aktuelle Kurse\n"
+        "/mittag - Mittags-Briefing\n"
+        "/abend - Abend-Briefing\n"
+        "/tranche BTC 75000 500 - Tranche anlegen\n"
+        "/tranchen - Alle Tranchen\n"
+        "/analysen - Gespeicherte HKCM-Analysen\n\n"
+        "Schick mir einen HKCM-Screenshot und ich speichere die Analyse!\n"
+        "Oder stell mir eine Frage!"
     )
 
 async def preise(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Lade Preise...")
     try:
         data = await get_prices()
-        text = "📊 *Aktuelle Kurse*\n\n" + format_prices_text(data)
+        text = "Aktuelle Kurse\n\n" + format_prices_text(data)
         now = datetime.utcnow()
-        text += f"\n\n_Stand: {now.strftime('%H:%M')} UTC_"
-        await update.message.reply_text(text, parse_mode="Markdown")
+        text += f"\n\nStand: {now.strftime('%H:%M')} UTC"
+        await update.message.reply_text(text)
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
@@ -160,7 +203,7 @@ async def tranche_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     coin, target, amount = args[0].upper(), args[1], args[2]
     tranches.append({"coin": coin, "target": target, "amount": amount})
-    await update.message.reply_text(f"✅ Tranche gespeichert:\n{coin} bei ${target} für €{amount}")
+    await update.message.reply_text(f"Tranche gespeichert:\n{coin} bei ${target} fuer EUR{amount}")
 
 async def tranchen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not tranches:
@@ -168,20 +211,33 @@ async def tranchen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     try:
         data = await get_prices()
-        lines = ["📋 *Deine Tranchen*\n"]
+        lines = ["Deine Tranchen\n"]
         for t in tranches:
             coin_id = next((k for k, v in COINS.items() if v == t['coin']), None)
             current = data.get(coin_id, {}).get("usd", 0) if coin_id else 0
             target = float(t['target'])
             diff = ((current - target) / target * 100) if target else 0
-            status = "✅ Kaufzone!" if current <= target * 1.02 else f"{diff:+.1f}% vom Ziel"
-            lines.append(f"*{t['coin']}*: Ziel ${t['target']} | €{t['amount']}\nAktuell: {format_price(current)} | {status}\n")
-        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+            status = "Kaufzone!" if current <= target * 1.02 else f"{diff:+.1f}% vom Ziel"
+            lines.append(f"{t['coin']}: Ziel ${t['target']} | EUR{t['amount']}\nAktuell: {format_price(current)} | {status}\n")
+        await update.message.reply_text("\n".join(lines))
+    except Exception as e:
+        await update.message.reply_text(f"Fehler: {e}")
+
+async def analysen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        analysen = get_analysen()
+        if not analysen or not isinstance(analysen, list):
+            await update.message.reply_text("Noch keine Analysen gespeichert.")
+            return
+        lines = ["Gespeicherte HKCM-Analysen:\n"]
+        for a in analysen[:5]:
+            lines.append(f"{a.get('Datum','')} - {a.get('Coin','')}")
+        await update.message.reply_text("\n".join(lines))
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
 async def image_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📸 Analysiere Bild...")
+    await update.message.reply_text("Analysiere HKCM-Screenshot...")
     try:
         photo = update.message.photo[-1]
         file = await context.bot.get_file(photo.file_id)
@@ -190,21 +246,33 @@ async def image_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         data = await get_prices()
         prices_text = format_prices_text(data)
-        caption = update.message.caption or ""
 
         user_prompt = f"""Das ist ein Screenshot einer HKCM Krypto-Analyse.
-Lies den gesamten Text aus dem Bild und fasse ihn auf Deutsch zusammen.
-Extrahiere: Coin, Primärszenario, Alternativszenario, Unterstuetzungen, Widerstaende, Handelsmoeglichkeiten.
-Gib dann eine kurze Einschaetzung basierend auf dem aktuellen Kurs.
+Extrahiere folgende Infos strukturiert:
+- Coin (Name und Symbol)
+- Datum der Analyse
+- Primaerszenario
+- Alternativszenario
+- Unterstuetzungen (Preise)
+- Widerstaende (Preise)
+- Handelsmoeglichkeiten (konkrete Einstiegszonen falls vorhanden)
 
-Aktueller Kurs aus dem Portfolio:
-{prices_text}
+Dann: kurze Einschaetzung basierend auf aktuellem Kurs.
 
-{f'Zusatzinfo: {caption}' if caption else ''}"""
+Aktuelle Kurse:
+{prices_text}"""
 
-        system = "Du bist Johannas Crypto-Assistent. Analysiere HKCM-Screenshots und erklaere sie klar auf Deutsch."
+        system = "Du bist Johannas Crypto-Assistent. Analysiere HKCM-Screenshots strukturiert auf Deutsch."
         reply = ask_ai_with_image(system, user_prompt, image_base64)
+
+        coin_extract_prompt = f"Welcher Coin-Symbol (z.B. BTC, ETH, RENDER) wird in diesem Text analysiert? Antworte nur mit dem Symbol: {reply[:200]}"
+        coin_symbol = ask_ai("Antworte nur mit dem Coin-Symbol.", coin_extract_prompt).strip().upper()
+
+        save_analyse(coin_symbol, reply)
+
         await update.message.reply_text(reply)
+        await update.message.reply_text(f"Analyse fuer {coin_symbol} gespeichert und wird ab jetzt in deinen Briefings beruecksichtigt!")
+
     except Exception as e:
         await update.message.reply_text(f"Fehler beim Bildlesen: {e}")
 
@@ -214,12 +282,18 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         data = await get_prices()
         prices_text = format_prices_text(data)
-        system = f"""Du bist Johannas persoenlicher Crypto-Assistent. Sie ist Bauzeichnerin und investiert nebenberuflich in Krypto. Ihre Coins: BTC, ETH, XRP, ADA, LTC, AVAX, HBAR, CRO, POL, RENDER, VET, FET, MANA, LINK.
+        analysen_text = format_analysen()
+
+        system = f"""Du bist Johannas persoenlicher Crypto-Assistent. Sie ist Bauzeichnerin und investiert nebenberuflich in Krypto.
+Ihre Coins: BTC, ETH, XRP, ADA, LTC, AVAX, HBAR, CRO, POL, RENDER, VET, FET, MANA, LINK.
 
 Aktuelle Preise:
 {prices_text}
 
-Antworte auf Deutsch. Kurz, direkt, klar."""
+{f'Gespeicherte HKCM-Analysen:{chr(10)}{analysen_text}' if analysen_text else ''}
+
+Antworte auf Deutsch. Kurz, direkt, klar. Beziehe dich auf HKCM-Analysen wenn relevant."""
+
         reply = ask_ai(system, text)
         await update.message.reply_text(reply)
     except Exception as e:
@@ -248,9 +322,9 @@ async def check_tranches(context: ContextTypes.DEFAULT_TYPE):
             current = data.get(coin_id, {}).get("usd", 0)
             target = float(t['target'])
             if current <= target * 1.02:
-                alerts.append(f"🚨 *{t['coin']}* bei Kaufzone!\nZiel: ${t['target']} | Aktuell: {format_price(current)}\nBetrag: €{t['amount']}")
+                alerts.append(f"ALARM: {t['coin']} bei Kaufzone!\nZiel: ${t['target']} | Aktuell: {format_price(current)}\nBetrag: EUR{t['amount']}")
         if alerts:
-            await context.bot.send_message(chat_id=CHAT_ID, text="\n\n".join(alerts), parse_mode="Markdown")
+            await context.bot.send_message(chat_id=CHAT_ID, text="\n\n".join(alerts))
     except:
         pass
 
@@ -262,6 +336,7 @@ def main():
     app.add_handler(CommandHandler("abend", abend_cmd))
     app.add_handler(CommandHandler("tranche", tranche_cmd))
     app.add_handler(CommandHandler("tranchen", tranchen_cmd))
+    app.add_handler(CommandHandler("analysen", analysen_cmd))
     app.add_handler(MessageHandler(filters.PHOTO, image_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
@@ -270,7 +345,7 @@ def main():
     job_queue.run_daily(auto_briefing, time=datetime.strptime("18:00", "%H:%M").time())
     job_queue.run_repeating(check_tranches, interval=1800, first=60)
 
-    print("Bot läuft...")
+    print("Bot laeuft...")
     app.run_polling()
 
 if __name__ == "__main__":
