@@ -1,10 +1,9 @@
 import os
-import asyncio
 import aiohttp
+import requests
 from datetime import datetime
-from telegram import Update, Bot
+from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from openai import OpenAI
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
@@ -53,17 +52,24 @@ def format_prices_text(data):
         lines.append(f"{sym}: {format_price(price)} {arrow}{abs(chg):.1f}%")
     return "\n".join(lines)
 
-def ask_openai(system, user_message):
-    client = OpenAI(api_key=OPENAI_API_KEY)
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user_message}
-        ],
-        max_tokens=800
+def ask_ai(system, user_message):
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_message}
+            ],
+            "max_tokens": 800
+        },
+        timeout=30
     )
-    return response.choices[0].message.content
+    return response.json()["choices"][0]["message"]["content"]
 
 async def generate_briefing(briefing_type, prices_text):
     tranche_info = ""
@@ -71,23 +77,13 @@ async def generate_briefing(briefing_type, prices_text):
         tranche_info = "\n\nAktive Tranchen:\n" + "\n".join(
             [f"- {t['coin']}: Ziel ${t['target']}, Betrag €{t['amount']}" for t in tranches]
         )
-    
-    prompt = f"""Erstelle ein kompaktes {briefing_type} für Johanna auf Deutsch.
-
-Aktuelle Kurse:
+    prompt = f"""Aktuelle Kurse:
 {prices_text}
 {tranche_info}
 
-Format:
-📊 *{briefing_type}* – {datetime.now().strftime('%d.%m.%Y %H:%M')}
-
-Kurzer Marktüberblick (2-3 Sätze), was fällt heute auf?
-{('Tranche-Check: Welche Zielpreise sind nah?' if tranches else '')}
-
-Max 150 Wörter. Direkt und klar."""
-
+Erstelle ein kompaktes {briefing_type} auf Deutsch. Max 150 Wörter. Direkt und klar. Was fällt heute auf?"""
     system = "Du bist ein Crypto-Assistent. Antworte auf Deutsch, kurz und direkt."
-    return ask_openai(system, prompt)
+    return ask_ai(system, prompt)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -106,26 +102,27 @@ async def preise(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         data = await get_prices()
         text = "📊 *Aktuelle Kurse*\n\n" + format_prices_text(data)
-        text += f"\n\n_Stand: {datetime.now().strftime('%H:%M Uhr')}_"
+        now = datetime.utcnow()
+        text += f"\n\n_Stand: {now.strftime('%H:%M')} UTC_"
         await update.message.reply_text(text, parse_mode="Markdown")
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
 async def mittag_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Erstelle Mittags-Briefing...")
+    await update.message.reply_text("Erstelle Briefing...")
     try:
         data = await get_prices()
         briefing = await generate_briefing("Mittags-Briefing", format_prices_text(data))
-        await update.message.reply_text(briefing, parse_mode="Markdown")
+        await update.message.reply_text(briefing)
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
 async def abend_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Erstelle Abend-Briefing...")
+    await update.message.reply_text("Erstelle Briefing...")
     try:
         data = await get_prices()
         briefing = await generate_briefing("Abend-Briefing", format_prices_text(data))
-        await update.message.reply_text(briefing, parse_mode="Markdown")
+        await update.message.reply_text(briefing)
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
@@ -146,7 +143,7 @@ async def tranchen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data = await get_prices()
         lines = ["📋 *Deine Tranchen*\n"]
         for t in tranches:
-            coin_id = next((k for k,v in COINS.items() if v == t['coin']), None)
+            coin_id = next((k for k, v in COINS.items() if v == t['coin']), None)
             current = data.get(coin_id, {}).get("usd", 0) if coin_id else 0
             target = float(t['target'])
             diff = ((current - target) / target * 100) if target else 0
@@ -168,18 +165,18 @@ Aktuelle Preise:
 {prices_text}
 
 Antworte auf Deutsch. Kurz, direkt, klar."""
-        reply = ask_openai(system, text)
+        reply = ask_ai(system, text)
         await update.message.reply_text(reply)
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
 async def auto_briefing(context: ContextTypes.DEFAULT_TYPE):
-    hour = datetime.now().hour
-    briefing_type = "Mittags-Briefing" if hour == 12 else "Abend-Briefing"
+    hour = datetime.utcnow().hour
+    briefing_type = "Mittags-Briefing" if hour == 10 else "Abend-Briefing"
     try:
         data = await get_prices()
         briefing = await generate_briefing(briefing_type, format_prices_text(data))
-        await context.bot.send_message(chat_id=CHAT_ID, text=briefing, parse_mode="Markdown")
+        await context.bot.send_message(chat_id=CHAT_ID, text=briefing)
     except Exception as e:
         await context.bot.send_message(chat_id=CHAT_ID, text=f"Fehler: {e}")
 
@@ -190,7 +187,7 @@ async def check_tranches(context: ContextTypes.DEFAULT_TYPE):
         data = await get_prices()
         alerts = []
         for t in tranches:
-            coin_id = next((k for k,v in COINS.items() if v == t['coin']), None)
+            coin_id = next((k for k, v in COINS.items() if v == t['coin']), None)
             if not coin_id:
                 continue
             current = data.get(coin_id, {}).get("usd", 0)
@@ -213,8 +210,8 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
     job_queue = app.job_queue
-    job_queue.run_daily(auto_briefing, time=datetime.strptime("12:00", "%H:%M").time())
-    job_queue.run_daily(auto_briefing, time=datetime.strptime("20:00", "%H:%M").time())
+    job_queue.run_daily(auto_briefing, time=datetime.strptime("10:00", "%H:%M").time())
+    job_queue.run_daily(auto_briefing, time=datetime.strptime("18:00", "%H:%M").time())
     job_queue.run_repeating(check_tranches, interval=1800, first=60)
 
     print("Bot läuft...")
