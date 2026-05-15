@@ -29,7 +29,41 @@ COINS = {
     "chainlink": "LINK"
 }
 
-tranches = []
+def supabase_get(table, params=""):
+    r = requests.get(
+        f"{SUPABASE_URL}/rest/v1/{table}{params}",
+        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+    )
+    return r.json()
+
+def supabase_post(table, data):
+    requests.post(
+        f"{SUPABASE_URL}/rest/v1/{table}",
+        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"},
+        json=data
+    )
+
+def supabase_delete(table, params):
+    requests.delete(
+        f"{SUPABASE_URL}/rest/v1/{table}{params}",
+        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+    )
+
+def get_tranchen():
+    result = supabase_get("Tranchen", "?status=eq.aktiv")
+    if isinstance(result, list):
+        return result
+    return []
+
+def save_tranche(coin, zielpreis, betrag):
+    supabase_post("Tranchen", {"coin": coin, "zielpreis": zielpreis, "betrag": betrag, "status": "aktiv"})
+
+def mark_tranche_erreicht(tranche_id):
+    requests.patch(
+        f"{SUPABASE_URL}/rest/v1/Tranchen?id=eq.{tranche_id}",
+        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"},
+        json={"status": "erreicht"}
+    )
 
 async def get_prices():
     ids = ",".join(COINS.keys())
@@ -59,16 +93,10 @@ def format_prices_text(data):
 def ask_ai(system, user_message):
     response = requests.post(
         "https://api.openai.com/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        },
+        headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
         json={
             "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_message}
-            ],
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user_message}],
             "max_tokens": 1000
         },
         timeout=30
@@ -78,19 +106,14 @@ def ask_ai(system, user_message):
 def ask_ai_with_image(system, user_message, image_base64, mime_type="image/jpeg"):
     response = requests.post(
         "https://api.openai.com/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        },
+        headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
         json={
             "model": "gpt-4o",
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": [
                     {"type": "text", "text": user_message},
-                    {"type": "image_url", "image_url": {
-                        "url": f"data:{mime_type};base64,{image_base64}"
-                    }}
+                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_base64}"}}
                 ]}
             ],
             "max_tokens": 1000
@@ -101,29 +124,17 @@ def ask_ai_with_image(system, user_message, image_base64, mime_type="image/jpeg"
 
 def save_analyse(coin, inhalt):
     datum = datetime.now().strftime("%d.%m.%Y")
-    requests.post(
-        f"{SUPABASE_URL}/rest/v1/Analysen",
-        headers={
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={"Coin": coin, "Inhalt": inhalt, "Datum": datum}
-    )
+    supabase_post("Analysen", {"Coin": coin, "Inhalt": inhalt, "Datum": datum})
 
 def get_analysen():
-    response = requests.get(
-        f"{SUPABASE_URL}/rest/v1/Analysen?order=id.desc&limit=20",
-        headers={
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}"
-        }
-    )
-    return response.json()
+    result = supabase_get("Analysen", "?order=id.desc&limit=20")
+    if isinstance(result, list):
+        return result
+    return []
 
 def format_analysen():
     analysen = get_analysen()
-    if not analysen or not isinstance(analysen, list):
+    if not analysen:
         return ""
     lines = []
     for a in analysen[:10]:
@@ -131,18 +142,18 @@ def format_analysen():
     return "\n\n".join(lines)
 
 async def generate_briefing(briefing_type, prices_text):
+    tranchen = get_tranchen()
     tranche_info = ""
-    if tranches:
+    if tranchen:
         tranche_info = "\n\nAktive Tranchen:\n" + "\n".join(
-            [f"- {t['coin']}: Ziel ${t['target']}, Betrag EUR{t['amount']}" for t in tranches]
+            [f"- {t['coin']}: Ziel ${t['zielpreis']}, Betrag EUR{t['betrag']}" for t in tranchen]
         )
 
     analysen_text = format_analysen()
     analysen_info = f"\n\nGespeicherte HKCM-Analysen:\n{analysen_text}" if analysen_text else ""
-
     heute = datetime.now().strftime("%d.%m.%Y")
-    prompt = f"""Heute ist der {heute}. Aktuelle Kurse:
 
+    prompt = f"""Heute ist der {heute}. Aktuelle Kurse:
 {prices_text}
 {tranche_info}
 {analysen_info}
@@ -203,24 +214,25 @@ async def tranche_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(args) != 3:
         await update.message.reply_text("Format: /tranche BTC 75000 500\n(Coin, Zielpreis USD, Betrag EUR)")
         return
-    coin, target, amount = args[0].upper(), args[1], args[2]
-    tranches.append({"coin": coin, "target": target, "amount": amount})
-    await update.message.reply_text(f"Tranche gespeichert:\n{coin} bei ${target} fuer EUR{amount}")
+    coin, zielpreis, betrag = args[0].upper(), args[1], args[2]
+    save_tranche(coin, zielpreis, betrag)
+    await update.message.reply_text(f"Tranche gespeichert:\n{coin} bei ${zielpreis} fuer EUR{betrag}")
 
 async def tranchen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not tranches:
-        await update.message.reply_text("Noch keine Tranchen. Mit /tranche BTC 75000 500 anlegen.")
-        return
     try:
+        tranchen = get_tranchen()
+        if not tranchen:
+            await update.message.reply_text("Noch keine Tranchen. Mit /tranche BTC 75000 500 anlegen.")
+            return
         data = await get_prices()
-        lines = ["Deine Tranchen\n"]
-        for t in tranches:
+        lines = ["Deine aktiven Tranchen\n"]
+        for t in tranchen:
             coin_id = next((k for k, v in COINS.items() if v == t['coin']), None)
             current = data.get(coin_id, {}).get("usd", 0) if coin_id else 0
-            target = float(t['target'])
+            target = float(t['zielpreis'])
             diff = ((current - target) / target * 100) if target else 0
             status = "Kaufzone!" if current <= target * 1.02 else f"{diff:+.1f}% vom Ziel"
-            lines.append(f"{t['coin']}: Ziel ${t['target']} | EUR{t['amount']}\nAktuell: {format_price(current)} | {status}\n")
+            lines.append(f"{t['coin']}: Ziel ${t['zielpreis']} | EUR{t['betrag']}\nAktuell: {format_price(current)} | {status}\n")
         await update.message.reply_text("\n".join(lines))
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
@@ -228,7 +240,7 @@ async def tranchen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def analysen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         analysen = get_analysen()
-        if not analysen or not isinstance(analysen, list):
+        if not analysen:
             await update.message.reply_text("Noch keine Analysen gespeichert.")
             return
         lines = ["Gespeicherte HKCM-Analysen:\n"]
@@ -273,7 +285,7 @@ Aktuelle Kurse:
         save_analyse(coin_symbol, reply)
 
         await update.message.reply_text(reply)
-        await update.message.reply_text(f"Analyse fuer {coin_symbol} gespeichert und wird ab jetzt in deinen Briefings beruecksichtigt!")
+        await update.message.reply_text(f"Analyse fuer {coin_symbol} gespeichert!")
 
     except Exception as e:
         await update.message.reply_text(f"Fehler beim Bildlesen: {e}")
@@ -285,12 +297,16 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data = await get_prices()
         prices_text = format_prices_text(data)
         analysen_text = format_analysen()
+        tranchen = get_tranchen()
+        tranche_text = "\n".join([f"- {t['coin']}: Ziel ${t['zielpreis']}" for t in tranchen]) if tranchen else ""
 
         system = f"""Du bist Johannas persoenlicher Crypto-Assistent. Sie ist Bauzeichnerin und investiert nebenberuflich in Krypto.
 Ihre Coins: BTC, ETH, XRP, ADA, LTC, AVAX, HBAR, CRO, POL, RENDER, VET, FET, MANA, LINK.
 
 Aktuelle Preise:
 {prices_text}
+
+{f'Aktive Tranchen:{chr(10)}{tranche_text}' if tranche_text else ''}
 
 {f'Gespeicherte HKCM-Analysen:{chr(10)}{analysen_text}' if analysen_text else ''}
 
@@ -312,21 +328,23 @@ async def auto_briefing(context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=CHAT_ID, text=f"Fehler: {e}")
 
 async def check_tranches(context: ContextTypes.DEFAULT_TYPE):
-    if not tranches:
-        return
     try:
+        tranchen = get_tranchen()
+        if not tranchen:
+            return
         data = await get_prices()
-        alerts = []
-        for t in tranches:
+        for t in tranchen:
             coin_id = next((k for k, v in COINS.items() if v == t['coin']), None)
             if not coin_id:
                 continue
             current = data.get(coin_id, {}).get("usd", 0)
-            target = float(t['target'])
+            target = float(t['zielpreis'])
             if current <= target * 1.02:
-                alerts.append(f"ALARM: {t['coin']} bei Kaufzone!\nZiel: ${t['target']} | Aktuell: {format_price(current)}\nBetrag: EUR{t['amount']}")
-        if alerts:
-            await context.bot.send_message(chat_id=CHAT_ID, text="\n\n".join(alerts))
+                await context.bot.send_message(
+                    chat_id=CHAT_ID,
+                    text=f"ALARM: {t['coin']} bei Kaufzone!\nZiel: ${t['zielpreis']} | Aktuell: {format_price(current)}\nBetrag: EUR{t['betrag']}"
+                )
+                mark_tranche_erreicht(t['id'])
     except:
         pass
 
