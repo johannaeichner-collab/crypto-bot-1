@@ -227,4 +227,4 @@ Antworte auf Deutsch. Kurz, direkt, klar."""
 
 async def auto_briefing(context: ContextTypes.DEFAULT_TYPE):
     hour = datetime.utcnow().hour
-    briefing_type = "Mittags-Brief​​​​​​​​​​​​​​​​
+    briefing_type = "Mittags-Briefing" if hour == 10 else "Abend-Briefing"
