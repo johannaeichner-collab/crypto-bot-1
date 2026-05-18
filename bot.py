@@ -2,6 +2,7 @@ import os
 import aiohttp
 import requests
 import base64
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -97,7 +98,7 @@ def ask_ai(system, user_message):
         json={
             "model": "gpt-4o-mini",
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user_message}],
-            "max_tokens": 1000
+            "max_tokens": 1200
         },
         timeout=30
     )
@@ -141,6 +142,62 @@ def format_analysen():
         lines.append(f"[{a.get('Datum','')}] {a.get('Coin','')}: {a.get('Inhalt','')[:200]}")
     return "\n\n".join(lines)
 
+def get_fear_greed():
+    try:
+        r = requests.get("https://api.alternative.me/fng/?limit=1", timeout=10)
+        data = r.json()
+        value = int(data["data"][0]["value"])
+        label = data["data"][0]["value_classification"]
+        return value, label
+    except:
+        return None, None
+
+def get_btc_dominance():
+    try:
+        r = requests.get("https://api.coingecko.com/api/v3/global", timeout=10)
+        data = r.json()
+        dominance = data["data"]["market_cap_percentage"]["btc"]
+        return round(dominance, 1)
+    except:
+        return None
+
+def get_crypto_news():
+    feeds = [
+        ("CoinDesk", "https://www.coindesk.com/arc/outboundfeeds/rss/"),
+        ("CoinTelegraph", "https://cointelegraph.com/rss"),
+        ("Reuters", "https://feeds.reuters.com/reuters/technologyNews"),
+    ]
+    articles = []
+    for source, url in feeds:
+        try:
+            r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+            root = ET.fromstring(r.content)
+            items = root.findall(".//item")[:3]
+            for item in items:
+                title = item.findtext("title", "").strip()
+                link = item.findtext("link", "").strip()
+                if title and link and any(kw in title.lower() for kw in ["bitcoin", "crypto", "btc", "ethereum", "blockchain", "sec", "etf", "fed", "regulation", "reserve", "krypto"]):
+                    articles.append({"title": title, "link": link, "source": source})
+                    break
+        except:
+            continue
+    return articles[:4]
+
+def get_makro_context():
+    fg_value, fg_label = get_fear_greed()
+    btc_dom = get_btc_dominance()
+    news = get_crypto_news()
+    lines = []
+    if fg_value is not None:
+        lines.append(f"Fear & Greed Index: {fg_value}/100 ({fg_label})")
+    if btc_dom is not None:
+        lines.append(f"BTC Dominanz: {btc_dom}%")
+    if news:
+        lines.append("\nAktuelle News:")
+        for n in news:
+            lines.append(f"- {n['title']} [{n['source']}] {n['link']}")
+    return "\n".join(lines)
+
 async def generate_briefing(briefing_type, prices_text):
     tranchen = get_tranchen()
     tranche_info = ""
@@ -151,19 +208,32 @@ async def generate_briefing(briefing_type, prices_text):
 
     analysen_text = format_analysen()
     analysen_info = f"\n\nGespeicherte HKCM-Analysen:\n{analysen_text}" if analysen_text else ""
+    makro = get_makro_context()
     heute = datetime.now().strftime("%d.%m.%Y")
 
-    prompt = f"""Heute ist der {heute}. Aktuelle Kurse:
+    prompt = f"""Heute ist der {heute}.
+
+Aktuelle Coin-Kurse:
 {prices_text}
+
+Makro-Daten:
+{makro}
 {tranche_info}
 {analysen_info}
 
-Erstelle ein kompaktes {briefing_type} auf Deutsch. Max 200 Woerter.
-Beziehe dich auf die HKCM-Analysen wenn vorhanden.
-Erinnere Johanna wenn laut Analyse ein Einstieg oder Ausstieg relevant sein koennte.
-Direkt und klar. Was ist heute wichtig?"""
+Erstelle ein strukturiertes {briefing_type} auf Deutsch mit diesen Abschnitten:
 
-    system = "Du bist Johannas persoenlicher Crypto-Assistent. Antworte auf Deutsch, kurz und direkt."
+1. MARKT-UEBERBLICK (2-3 Saetze zu den wichtigsten Kursbewegungen)
+
+2. MAKRO & NEWS (Fear/Greed erklaeren, BTC Dominanz erklaeren, wichtigste News kurz mit Bedeutung fuer Crypto - bei News die Links behalten)
+
+3. HKCM-CHECK (welche Coins naehern sich Zielzonen laut gespeicherten Analysen?)
+
+4. HANDLUNGSHINWEISE (konkrete Hinweise was heute relevant sein koennte)
+
+Kurz, verstaendlich, direkt. Max 300 Woerter."""
+
+    system = "Du bist Johannas persoenlicher Crypto-Assistent. Erklaere Makrodaten einfach und verstaendlich. Antworte auf Deutsch."
     return ask_ai(system, prompt)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -173,10 +243,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/preise - Aktuelle Kurse\n"
         "/mittag - Mittags-Briefing\n"
         "/abend - Abend-Briefing\n"
+        "/makro - Makro-Update mit News\n"
         "/tranche BTC 75000 500 - Tranche anlegen\n"
         "/tranchen - Alle Tranchen\n"
-        "/analysen - Gespeicherte HKCM-Analysen\n\n"
-        "Schick mir einen HKCM-Screenshot und ich speichere die Analyse!\n"
+        "/analysen - HKCM-Analysen\n\n"
+        "Schick mir einen HKCM-Screenshot oder Text mit 'HKCM' und ich speichere die Analyse!\n"
         "Oder stell mir eine Frage!"
     )
 
@@ -191,12 +262,52 @@ async def preise(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
+async def makro_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Lade Makro-Daten und News...")
+    try:
+        fg_value, fg_label = get_fear_greed()
+        btc_dom = get_btc_dominance()
+        news = get_crypto_news()
+
+        lines = [f"MAKRO-UPDATE {datetime.now().strftime('%d.%m.%Y %H:%M')}\n"]
+
+        if fg_value is not None:
+            if fg_value <= 25:
+                fg_erkl = "Extreme Angst - historisch oft Kaufgelegenheit"
+            elif fg_value <= 45:
+                fg_erkl = "Angst - Markt ist vorsichtig"
+            elif fg_value <= 55:
+                fg_erkl = "Neutral - keine klare Richtung"
+            elif fg_value <= 75:
+                fg_erkl = "Gier - Markt laeuft gut, Vorsicht bei Einstiegen"
+            else:
+                fg_erkl = "Extreme Gier - Markt ueberhitzt, Ruecksetzer moeglich"
+            lines.append(f"Fear & Greed: {fg_value}/100 ({fg_label})\n-> {fg_erkl}\n")
+
+        if btc_dom is not None:
+            if btc_dom > 55:
+                dom_erkl = "BTC dominiert - Altcoins verlieren, Kapital fliesst in BTC"
+            elif btc_dom > 45:
+                dom_erkl = "Ausgeglichen - kein klarer Trend zwischen BTC und Altcoins"
+            else:
+                dom_erkl = "Altcoin-Season moeglich - Kapital fliesst von BTC in Altcoins"
+            lines.append(f"BTC Dominanz: {btc_dom}%\n-> {dom_erkl}\n")
+
+        if news:
+            lines.append("Aktuelle News:")
+            for n in news:
+                lines.append(f"\n{n['title']}\n-> Quelle: {n['source']}\n{n['link']}")
+
+        await update.message.reply_text("\n".join(lines), disable_web_page_preview=False)
+    except Exception as e:
+        await update.message.reply_text(f"Fehler: {e}")
+
 async def mittag_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Erstelle Briefing...")
     try:
         data = await get_prices()
         briefing = await generate_briefing("Mittags-Briefing", format_prices_text(data))
-        await update.message.reply_text(briefing)
+        await update.message.reply_text(briefing, disable_web_page_preview=True)
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
@@ -205,7 +316,7 @@ async def abend_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         data = await get_prices()
         briefing = await generate_briefing("Abend-Briefing", format_prices_text(data))
-        await update.message.reply_text(briefing)
+        await update.message.reply_text(briefing, disable_web_page_preview=True)
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
@@ -243,7 +354,6 @@ async def analysen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not analysen or not isinstance(analysen, list):
             await update.message.reply_text("Noch keine Analysen gespeichert.")
             return
-        # Neueste Analyse pro Coin
         latest = {}
         for a in analysen:
             coin = a.get('Coin', '')
@@ -289,7 +399,6 @@ Aktuelle Kurse:
         coin_symbol = ask_ai("Antworte nur mit dem Coin-Symbol.", coin_extract_prompt).strip().upper()
 
         save_analyse(coin_symbol, reply)
-
         await update.message.reply_text(reply)
         await update.message.reply_text(f"Analyse fuer {coin_symbol} gespeichert!")
 
@@ -337,7 +446,7 @@ async def auto_briefing(context: ContextTypes.DEFAULT_TYPE):
     try:
         data = await get_prices()
         briefing = await generate_briefing(briefing_type, format_prices_text(data))
-        await context.bot.send_message(chat_id=CHAT_ID, text=briefing)
+        await context.bot.send_message(chat_id=CHAT_ID, text=briefing, disable_web_page_preview=True)
     except Exception as e:
         await context.bot.send_message(chat_id=CHAT_ID, text=f"Fehler: {e}")
 
@@ -368,6 +477,7 @@ def main():
     app.add_handler(CommandHandler("preise", preise))
     app.add_handler(CommandHandler("mittag", mittag_cmd))
     app.add_handler(CommandHandler("abend", abend_cmd))
+    app.add_handler(CommandHandler("makro", makro_cmd))
     app.add_handler(CommandHandler("tranche", tranche_cmd))
     app.add_handler(CommandHandler("tranchen", tranchen_cmd))
     app.add_handler(CommandHandler("analysen", analysen_cmd))
