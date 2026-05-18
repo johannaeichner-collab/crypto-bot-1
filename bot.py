@@ -240,12 +240,18 @@ async def tranchen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def analysen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         analysen = get_analysen()
-        if not analysen:
+        if not analysen or not isinstance(analysen, list):
             await update.message.reply_text("Noch keine Analysen gespeichert.")
             return
-        lines = ["Gespeicherte HKCM-Analysen:\n"]
-        for a in analysen[:5]:
-            lines.append(f"{a.get('Datum','')} - {a.get('Coin','')}")
+        # Neueste Analyse pro Coin
+        latest = {}
+        for a in analysen:
+            coin = a.get('Coin', '')
+            if coin not in latest:
+                latest[coin] = a.get('Datum', '')
+        lines = ["Letzte HKCM-Analysen pro Coin:\n"]
+        for coin in sorted(latest.keys()):
+            lines.append(f"{latest[coin]} - {coin}")
         await update.message.reply_text("\n".join(lines))
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
