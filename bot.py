@@ -171,8 +171,8 @@ def get_oil_price():
         data = r.json()
         price = data.get("c")
         change = data.get("dp")
-        if price:
-            return round(price, 2), round(change, 2) if change else None
+        if price and price > 0:
+            return round(float(price), 2), round(float(change), 2) if change else None
         return None, None
     except:
         return None, None
@@ -180,19 +180,15 @@ def get_oil_price():
 def get_economic_calendar():
     try:
         today = datetime.now().strftime("%Y-%m-%d")
-        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         day_after = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
-
         r = requests.get(
             f"https://finnhub.io/api/v1/calendar/economic?from={today}&to={day_after}&token={FINNHUB_KEY}",
             timeout=10
         )
         data = r.json()
         events = data.get("economicCalendar", [])
-
         important = []
         keywords = ["fed", "fomc", "interest rate", "cpi", "inflation", "unemployment", "nonfarm", "gdp", "ppi", "ecb"]
-
         for e in events:
             name = e.get("event", "").lower()
             impact = e.get("impact", "").lower()
@@ -209,7 +205,7 @@ def get_economic_calendar():
     except:
         return []
 
-def get_crypto_news(since_hour=None):
+def get_crypto_news():
     feeds = [
         ("CoinDesk", "https://www.coindesk.com/arc/outboundfeeds/rss/"),
         ("CoinTelegraph", "https://cointelegraph.com/rss"),
@@ -219,8 +215,7 @@ def get_crypto_news(since_hour=None):
     articles = []
     keywords = ["bitcoin", "crypto", "btc", "ethereum", "blockchain", "sec", "etf",
                 "fed", "regulation", "reserve", "krypto", "eu", "clarity", "congress",
-                "iran", "geopolit", "oil", "oel", "trump", "powell"]
-
+                "iran", "geopolit", "oil", "trump", "powell"]
     for source, url in feeds:
         try:
             r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
@@ -231,30 +226,22 @@ def get_crypto_news(since_hour=None):
                 link = item.findtext("link", "").strip()
                 desc = item.findtext("description", "").strip()[:300]
                 if title and link and any(kw in title.lower() or kw in desc.lower() for kw in keywords):
-                    articles.append({
-                        "title": title,
-                        "link": link,
-                        "desc": desc,
-                        "source": source
-                    })
-                    if len(articles) >= 6:
-                        break
+                    articles.append({"title": title, "link": link, "desc": desc, "source": source})
+                    break
         except:
             continue
-        if len(articles) >= 6:
+        if len(articles) >= 3:
             break
     return articles[:3]
 
 def summarize_article(title, desc, link):
-    prompt = f"""Fasse diesen Artikel in 3-5 Saetzen auf Deutsch zusammen. Erklaere was passiert ist und was das fuer Crypto bedeutet.
+    prompt = f"""Fasse diesen Artikel in 4-5 Saetzen auf Deutsch zusammen. Erklaere was passiert ist und was das konkret fuer den Crypto-Markt bedeutet.
 
 Titel: {title}
 Inhalt: {desc}
 
-Format:
-[3-5 Saetze Zusammenfassung]
-Bedeutung fuer Crypto: [1 Satz]"""
-    return ask_ai("Du bist ein Finanzjournalist. Fasse Artikel kurz und verstaendlich zusammen.", prompt)
+Schreibe eine verstaendliche Zusammenfassung - keine Stichpunkte, sondern fliessender Text."""
+    return ask_ai("Du bist ein Finanzjournalist. Fasse Artikel klar und verstaendlich zusammen.", prompt)
 
 async def generate_briefing_msg1(briefing_type, prices_data, prices_text):
     btc = prices_data.get("bitcoin", {})
@@ -264,16 +251,16 @@ async def generate_briefing_msg1(briefing_type, prices_data, prices_text):
     oil_price, oil_change = get_oil_price()
     heute = datetime.now().strftime("%d.%m.%Y %H:%M")
 
-    btc_chg = btc.get("usd_24h_change", 0)
-    eth_chg = eth.get("usd_24h_change", 0)
+    btc_chg = btc.get("usd_24h_change", 0) or 0
+    eth_chg = eth.get("usd_24h_change", 0) or 0
 
     altcoin_lines = []
     for coin_id, sym in COINS.items():
         if sym in ["BTC", "ETH"]:
             continue
         d = prices_data.get(coin_id, {})
-        chg = d.get("usd_24h_change", 0)
-        price = d.get("usd", 0)
+        chg = d.get("usd_24h_change", 0) or 0
+        price = d.get("usd", 0) or 0
         diff = chg - btc_chg
         if diff > 1:
             status = "staerker als BTC"
@@ -283,36 +270,45 @@ async def generate_briefing_msg1(briefing_type, prices_data, prices_text):
             status = "aehnlich wie BTC"
         altcoin_lines.append(f"{sym}: {format_price(price)} ({chg:+.1f}%) - {status}")
 
+    oil_str = f"${oil_price}" if oil_price else "nicht verfuegbar"
+    if oil_price and oil_change:
+        oil_str = f"${oil_price} ({oil_change:+.1f}%)"
+
+    fg_str = f"{fg_value}/100 ({fg_label})" if fg_value else "nicht verfuegbar"
+    dom_str = f"{btc_dom}%" if btc_dom else "nicht verfuegbar"
+
     prompt = f"""Erstelle Nachricht 1 des {briefing_type} fuer Johanna. Heute: {heute}
 
-BITCOIN: ${format_price(btc.get('usd',0))} ({btc_chg:+.1f}%)
-ETHEREUM: ${format_price(eth.get('usd',0))} ({eth_chg:+.1f}%)
+BITCOIN: {format_price(btc.get('usd', 0))} ({btc_chg:+.1f}%)
+ETHEREUM: {format_price(eth.get('usd', 0))} ({eth_chg:+.1f}%)
 
-ALTCOINS:
+ALLE ALTCOINS:
 {chr(10).join(altcoin_lines)}
 
 MAKRO:
-Fear & Greed: {fg_value}/100 ({fg_label}) - {"Angst" if fg_value and fg_value < 40 else "Gier" if fg_value and fg_value > 60 else "Neutral"}
-BTC Dominanz: {btc_dom}%
-Oelpreis: ${oil_price} ({oil_change:+.1f}%) - {"steigend" if oil_change and oil_change > 0 else "fallend"}
+Fear & Greed: {fg_str}
+BTC Dominanz: {dom_str}
+Oelpreis: {oil_str}
 
 Formatiere so:
 
 MARKT {briefing_type.upper()} - {heute}
 
 BTC Bitcoin
-[2-3 Saetze: Kursbewegung erklaeren, wichtige Level, HKCM-Bezug falls relevant]
+[2-3 Saetze: Kursbewegung erklaeren, wichtige Preislevels]
 
-ETH Ethereum  
+ETH Ethereum
 [2 Saetze: Kursbewegung, Verhaeltnis zu BTC]
 
 ALTCOIN-LAGE
-BTC Dominanz {btc_dom}% - [erklaere was das bedeutet, Bitcoin Season oder Altcoin Season]
-[Liste alle Altcoins mit Status, gruppiere: staerker / aehnlich / schwaecher als BTC]
+BTC Dominanz {dom_str} - [erklaere ob Bitcoin Season oder Altcoin Season]
+Staerker als BTC: [Liste]
+Aehnlich wie BTC: [Liste]
+Schwaecher als BTC: [Liste]
 
 MARKTSTIMMUNG
-Fear & Greed: {fg_value}/100 - [erklaere was das historisch bedeutet]
-Oelpreis: ${oil_price} - [erklaere Zusammenhang mit Crypto-Markt]
+Fear & Greed: {fg_str} - [erklaere was das bedeutet]
+Oelpreis: {oil_str} - [erklaere Zusammenhang mit Crypto]
 
 Max 350 Woerter. Auf Deutsch."""
 
@@ -335,7 +331,7 @@ async def generate_briefing_msg2(briefing_type, prices_data):
     if calendar:
         calendar_lines = []
         for e in calendar:
-            actual = f" | Aktuell: {e['actual']}" if e['actual'] else " | Ergebnis ausstehend"
+            actual = f" | Ergebnis: {e['actual']}" if e['actual'] else " | Ergebnis ausstehend"
             forecast = f" | Prognose: {e['forecast']}" if e['forecast'] else ""
             calendar_lines.append(f"{e['date'][:10]} - {e['event']}{actual}{forecast}")
         calendar_text = "\n".join(calendar_lines)
@@ -363,8 +359,8 @@ Formatiere so:
 TOP NEWS
 
 1. [Titel]
-[Zusammenfassung 3-4 Saetze]
-Bedeutung: [1 Satz was das fuer Crypto bedeutet]
+[4-5 Saetze Zusammenfassung was passiert ist und warum das wichtig ist]
+Bedeutung fuer Crypto: [1 Satz]
 Quelle: [Name] | [Link]
 
 2. [gleich]
@@ -373,10 +369,11 @@ Quelle: [Name] | [Link]
 
 WIRTSCHAFTSKALENDER
 [Wenn wichtige Termine morgen/uebermorgen: Vorwarnung mit Erklaerung was der Termin bedeutet]
-[Wenn heute Ergebnis vorliegt: Was war das Ergebnis und was bedeutet es]
+[Wenn heute Ergebnis vorliegt: Was war das Ergebnis und was bedeutet es fuer Crypto]
+[Wenn keine Termine: kurz erwaehnen]
 
 HKCM-CHECK
-[Welche deiner Coins naehern sich laut gespeicherten Analysen einer Kauf- oder Verkaufszone?]
+[Welche Coins naehern sich laut Analysen einer Kauf- oder Verkaufszone?]
 
 HANDLUNGSHINWEISE
 [2-3 konkrete Punkte was heute relevant sein koennte]
@@ -446,8 +443,9 @@ async def makro_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines.append(f"BTC Dominanz: {btc_dom}%\n-> {dom_erkl}\n")
 
         if oil_price:
+            oil_chg_str = f" ({oil_change:+.1f}%)" if oil_change is not None else ""
             oil_erkl = "Hoher Oelpreis signalisiert geopolitische Spannung - oft negativ fuer Risk-Assets" if oil_price > 85 else "Oelpreis stabil - kein Stresssignal"
-            lines.append(f"Oelpreis: ${oil_price} ({oil_change:+.1f}%)\n-> {oil_erkl}\n")
+            lines.append(f"Oelpreis: ${oil_price}{oil_chg_str}\n-> {oil_erkl}\n")
 
         if calendar:
             lines.append("Wirtschaftskalender:")
