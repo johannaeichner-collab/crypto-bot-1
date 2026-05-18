@@ -300,6 +300,14 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tranchen = get_tranchen()
         tranche_text = "\n".join([f"- {t['coin']}: Ziel ${t['zielpreis']}" for t in tranchen]) if tranchen else ""
 
+        text_upper = text.upper()
+        if "HKCM" in text_upper:
+            coin_extract_prompt = f"Welcher Coin-Symbol (z.B. BTC, ETH, CRO, RENDER) wird in diesem Text analysiert? Antworte nur mit dem Symbol: {text[:300]}"
+            coin_symbol = ask_ai("Antworte nur mit dem Coin-Symbol.", coin_extract_prompt).strip().upper()
+            save_analyse(coin_symbol, text)
+            await update.message.reply_text(f"Analyse fuer {coin_symbol} gespeichert!")
+            return
+
         system = f"""Du bist Johannas persoenlicher Crypto-Assistent. Sie ist Bauzeichnerin und investiert nebenberuflich in Krypto.
 Ihre Coins: BTC, ETH, XRP, ADA, LTC, AVAX, HBAR, CRO, POL, RENDER, VET, FET, MANA, LINK.
 
