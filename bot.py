@@ -31,6 +31,26 @@ COINS = {
     "chainlink": "LINK"
 }
 
+LERNKARTEN = [
+    {"begriff": "Layer 1", "erklaerung": "Layer 1 ist die Basis-Blockchain selbst - zum Beispiel Bitcoin oder Ethereum. Alles andere baut darauf auf.", "beispiel": "Bitcoin (BTC) und Ethereum (ETH) sind Layer 1. Sie sind langsamer aber am sichersten.", "kategorie": "Grundlagen", "frage": "Was ist eine Layer 1 Blockchain?", "antworten": ["A) Eine Blockchain die auf einer anderen aufbaut", "B) Die Basis-Blockchain selbst wie Bitcoin oder Ethereum", "C) Eine Art Wallet"], "richtig": "B"},
+    {"begriff": "Layer 2", "erklaerung": "Layer 2 sind Netzwerke die auf einer Layer 1 aufbauen und Transaktionen schneller und guenstiger machen.", "beispiel": "POL (Polygon) ist ein Layer 2 auf Ethereum. Wenn ETH ueberlastet ist, nutzen viele POL.", "kategorie": "Grundlagen", "frage": "Was macht ein Layer 2 Netzwerk?", "antworten": ["A) Es ersetzt Bitcoin", "B) Es macht Transaktionen schneller und guenstiger", "C) Es ist eine neue Wallet"], "richtig": "B"},
+    {"begriff": "DeFi", "erklaerung": "DeFi steht fuer Decentralized Finance. Kein Mittelsmann wie eine Bank, alles laeuft ueber Smart Contracts automatisch.", "beispiel": "Du kannst Zinsen verdienen, leihen oder tauschen - ohne Bank, 24/7.", "kategorie": "Konzepte", "frage": "Was bedeutet DeFi?", "antworten": ["A) Digital Finance", "B) Decentralized Finance - Finanzen ohne Mittelsmann", "C) Default Finance"], "richtig": "B"},
+    {"begriff": "Smart Contract", "erklaerung": "Ein Smart Contract ist ein selbstausfuehrender Vertrag auf der Blockchain. Regeln sind im Code und werden automatisch ausgefuehrt.", "beispiel": "Wenn Coin X einen Preis erreicht, wird automatisch verkauft - niemand muss das manuell machen.", "kategorie": "Grundlagen", "frage": "Was ist ein Smart Contract?", "antworten": ["A) Ein intelligenter Anwalt", "B) Ein selbstausfuehrender Vertrag im Code der Blockchain", "C) Eine Smartphone App"], "richtig": "B"},
+    {"begriff": "Elliott Wellen", "erklaerung": "Die Elliott-Wellen-Theorie besagt dass Maerkte in Mustern schwingen - 5 Impulswellen nach oben, 3 Korrekturwellen nach unten. HKCM nutzt diese Methode.", "beispiel": "HKCM analysiert wo sich BTC gerade in diesem Muster befindet. Welle 3 ist meist die staerkste Bewegung.", "kategorie": "Analyse", "frage": "Was beschreibt die Elliott-Wellen-Theorie?", "antworten": ["A) Meeresstroemungen", "B) Vorhersehbare Kursmuster - 5 Aufwaerts- und 3 Abwaertswellen", "C) Wallet-Sicherheit"], "richtig": "B"},
+    {"begriff": "Market Cap", "erklaerung": "Market Cap = Kurs x Anzahl der Coins im Umlauf. Zeigt wie gross ein Coin wirklich ist.", "beispiel": "Ein Coin der 1000 Euro kostet aber nur 1000 Stueck hat ist kleiner als ein Coin der 1 Euro kostet aber eine Milliarde Stueck hat.", "kategorie": "Grundlagen", "frage": "Was ist die Market Cap?", "antworten": ["A) Der aktuelle Kurs", "B) Kurs mal Anzahl aller Coins im Umlauf", "C) Das maximale Limit an Coins"], "richtig": "B"},
+    {"begriff": "BTC Dominanz", "erklaerung": "BTC Dominanz zeigt welchen Anteil Bitcoin am gesamten Crypto-Markt hat. Hohe Dominanz = Bitcoin Season. Niedrige Dominanz = Altcoin Season.", "beispiel": "BTC Dominanz 58%: Von 100 Euro in Crypto gehen 58 Euro in Bitcoin. Gut fuer BTC, schlecht fuer Altcoins.", "kategorie": "Markt", "frage": "Was bedeutet eine hohe BTC Dominanz?", "antworten": ["A) Bitcoin steigt stark", "B) Grossteil des Geldes fliesst in Bitcoin, Altcoins verlieren", "C) Viele neue Bitcoins werden gemint"], "richtig": "B"},
+    {"begriff": "Fear & Greed Index", "erklaerung": "Misst die Marktstimmung von 0 (extreme Angst) bis 100 (extreme Gier). Kaufe wenn alle Angst haben, verkaufe wenn alle gierig sind.", "beispiel": "Index 15 (extreme Angst) = oft guter Kaufzeitpunkt. Index 90 (extreme Gier) = Markt ueberhitzt.", "kategorie": "Markt", "frage": "Was sagt ein Fear & Greed Index von 20?", "antworten": ["A) Markt ist sehr gierig", "B) Extreme Angst - historisch oft ein Kaufsignal", "C) Index funktioniert nicht"], "richtig": "B"},
+    {"begriff": "Widerstand (Resistance)", "erklaerung": "Ein Widerstand ist ein Preislevel wo ein Coin oft stoppt oder zurueckfaellt. Viele Verkaeufer warten dort.", "beispiel": "HKCM nennt fuer RENDER 2.58 und 3.10 Dollar als Widerstaende. Erst wenn diese fallen geht es richtig aufwaerts.", "kategorie": "Analyse", "frage": "Was ist ein Widerstand im Chart?", "antworten": ["A) Technische Stoerung", "B) Preislevel wo viele Verkaeufer warten und der Kurs oft stoppt", "C) Der maximale Preis"], "richtig": "B"},
+    {"begriff": "Unterstuetzung (Support)", "erklaerung": "Support ist ein Preislevel wo viele Kaeufer einsteigen und der Kurs abgefedert wird. Faellt ein Coin darunter ist das ein schlechtes Zeichen.", "beispiel": "CRO hat Support bei 0.07 Dollar. Solange der Kurs darueber bleibt ist die Situation stabil.", "kategorie": "Analyse", "frage": "Was passiert wenn ein Coin unter seinen Support faellt?", "antworten": ["A) Er steigt automatisch", "B) Schlechtes Zeichen - der naechste Support wird gesucht", "C) Er wird automatisch gekauft"], "richtig": "B"},
+    {"begriff": "DCA", "erklaerung": "Dollar Cost Averaging bedeutet regelmaessig einen fixen Betrag zu investieren - egal ob Kurs hoch oder niedrig. Im Durchschnitt ein fairer Preis.", "beispiel": "Jeden Monat 100 Euro in BTC. Im Crash kaufst du viel, bei hohem Kurs wenig. Ueber Zeit funktioniert das gut.", "kategorie": "Strategie", "frage": "Was ist DCA?", "antworten": ["A) Immer beim Tiefpunkt kaufen", "B) Regelmaessig fixen Betrag investieren unabhaengig vom Kurs", "C) Nur in Dollar investieren"], "richtig": "B"},
+    {"begriff": "Tranchen", "erklaerung": "Nicht alles auf einmal investieren, sondern in mehreren Schritten. Risiko wird verteilt.", "beispiel": "BTC bei 80k erste Tranche. Faellt er auf 70k zweite Tranche. Faellt er auf 60k dritte Tranche.", "kategorie": "Strategie", "frage": "Warum kauft man in Tranchen?", "antworten": ["A) Weil nicht genug Geld da ist", "B) Um Risiko zu verteilen und bei fallenden Kursen guenstiger einzukaufen", "C) Weil Exchanges kleine Mengen fordern"], "richtig": "B"},
+    {"begriff": "Bull Run", "erklaerung": "Ein Bull Run ist eine starke anhaltende Aufwaertsbewegung. Historisch bei Bitcoin alle 4 Jahre nach dem Halving.", "beispiel": "2020-2021 grosser Bull Run. BTC von 10k auf 69k Dollar. Altcoins wie ADA und LINK stiegen teils 1000 Prozent.", "kategorie": "Markt", "frage": "Was ist ein Bull Run?", "antworten": ["A) Bitcoin faellt auf Tiefpunkt", "B) Starke anhaltende Aufwaertsbewegung im Markt", "C) Viele neue Coins werden erschaffen"], "richtig": "B"},
+    {"begriff": "Halving", "erklaerung": "Beim Bitcoin Halving wird die Mining-Belohnung halbiert. Passiert alle 4 Jahre. Weniger neues Angebot - historisch folgte danach immer ein Bull Run.", "beispiel": "Letztes Halving April 2024. Statt 6.25 BTC bekommen Miner jetzt 3.125 BTC. Weniger Angebot bei gleicher Nachfrage.", "kategorie": "Bitcoin", "frage": "Was bewirkt das Bitcoin Halving?", "antworten": ["A) Bitcoin wird schneller", "B) Mining-Belohnung halbiert sich, weniger neue BTC kommen auf den Markt", "C) Preis halbiert sich automatisch"], "richtig": "B"},
+    {"begriff": "Altcoin Season", "erklaerung": "Wenn Altcoins stark steigen und besser performen als BTC. Passiert meist nachdem BTC einen Hoechststand erreicht.", "beispiel": "BTC Dominanz unter 45 Prozent = Altcoin Season wahrscheinlich. Dann koennen ADA XRP RENDER stark outperformen.", "kategorie": "Markt", "frage": "Wann ist Altcoin Season?", "antworten": ["A) Wenn neue Altcoins erschaffen werden", "B) Wenn Altcoins besser performen als Bitcoin", "C) Wenn Altcoins auf Jahrestief sind"], "richtig": "B"},
+]
+
+pending_quiz = {}
+
 def supabase_get(table, params=""):
     r = requests.get(
         f"{SUPABASE_URL}/rest/v1/{table}{params}",
@@ -41,6 +61,13 @@ def supabase_get(table, params=""):
 def supabase_post(table, data):
     requests.post(
         f"{SUPABASE_URL}/rest/v1/{table}",
+        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"},
+        json=data
+    )
+
+def supabase_patch(table, params, data):
+    requests.patch(
+        f"{SUPABASE_URL}/rest/v1/{table}{params}",
         headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"},
         json=data
     )
@@ -61,11 +88,7 @@ def save_tranche(coin, zielpreis, betrag):
     supabase_post("Tranchen", {"coin": coin, "zielpreis": zielpreis, "betrag": betrag, "status": "aktiv"})
 
 def mark_tranche_erreicht(tranche_id):
-    requests.patch(
-        f"{SUPABASE_URL}/rest/v1/Tranchen?id=eq.{tranche_id}",
-        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"},
-        json={"status": "erreicht"}
-    )
+    supabase_patch("Tranchen", f"?id=eq.{tranche_id}", {"status": "erreicht"})
 
 def save_analyse(coin, inhalt):
     datum = datetime.now().strftime("%d.%m.%Y")
@@ -85,6 +108,47 @@ def format_analysen():
     for a in analysen[:10]:
         lines.append(f"[{a.get('Datum','')}] {a.get('Coin','')}: {a.get('Inhalt','')[:200]}")
     return "\n\n".join(lines)
+
+def get_lernkarte_des_tages():
+    try:
+        result = supabase_get("Lernkarten", "?order=id.desc&limit=1")
+        if isinstance(result, list) and result:
+            letzte = result[0].get("begriff", "")
+            for i, k in enumerate(LERNKARTEN):
+                if k["begriff"] == letzte:
+                    naechste = LERNKARTEN[(i + 1) % len(LERNKARTEN)]
+                    return naechste
+        return LERNKARTEN[0]
+    except:
+        return LERNKARTEN[0]
+
+def save_lernkarte(begriff):
+    datum = datetime.now().strftime("%d.%m.%Y")
+    supabase_post("Lernkarten", {
+        "begriff": begriff,
+        "erklaerung": "",
+        "beispiel": "",
+        "kategorie": "",
+        "letzte_wiederholung": datum,
+        "naechste_wiederholung": datum,
+        "richtig": "0",
+        "falsch": "0"
+    })
+
+def update_lernkarte_score(begriff, richtig):
+    try:
+        result = supabase_get("Lernkarten", f"?begriff=eq.{begriff}&order=id.desc&limit=1")
+        if isinstance(result, list) and result:
+            eintrag = result[0]
+            r = int(eintrag.get("richtig", "0") or "0")
+            f = int(eintrag.get("falsch", "0") or "0")
+            if richtig:
+                r += 1
+            else:
+                f += 1
+            supabase_patch("Lernkarten", f"?id=eq.{eintrag['id']}", {"richtig": str(r), "falsch": str(f)})
+    except:
+        pass
 
 async def get_prices():
     ids = ",".join(COINS.keys())
@@ -164,14 +228,11 @@ def get_btc_dominance():
 
 def get_oil_price():
     try:
-        r = requests.get(
-            f"https://finnhub.io/api/v1/quote?symbol=USOIL&token={FINNHUB_KEY}",
-            timeout=10
-        )
+        r = requests.get(f"https://finnhub.io/api/v1/quote?symbol=USOIL&token={FINNHUB_KEY}", timeout=10)
         data = r.json()
         price = data.get("c")
         change = data.get("dp")
-        if price and price > 0:
+        if price and float(price) > 0:
             return round(float(price), 2), round(float(change), 2) if change else None
         return None, None
     except:
@@ -214,8 +275,8 @@ def get_crypto_news():
     ]
     articles = []
     keywords = ["bitcoin", "crypto", "btc", "ethereum", "blockchain", "sec", "etf",
-                "fed", "regulation", "reserve", "krypto", "eu", "clarity", "congress",
-                "iran", "geopolit", "oil", "trump", "powell"]
+                "fed", "regulation", "reserve", "eu", "clarity", "congress",
+                "iran", "geopolit", "trump", "powell"]
     for source, url in feeds:
         try:
             r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
@@ -240,8 +301,8 @@ def summarize_article(title, desc, link):
 Titel: {title}
 Inhalt: {desc}
 
-Schreibe eine verstaendliche Zusammenfassung - keine Stichpunkte, sondern fliessender Text."""
-    return ask_ai("Du bist ein Finanzjournalist. Fasse Artikel klar und verstaendlich zusammen.", prompt)
+Schreibe verstaendlich - kein Fachjargon ohne Erklaerung."""
+    return ask_ai("Du bist ein Finanzjournalist. Fasse Artikel klar zusammen.", prompt)
 
 async def generate_briefing_msg1(briefing_type, prices_data, prices_text):
     btc = prices_data.get("bitcoin", {})
@@ -270,9 +331,10 @@ async def generate_briefing_msg1(briefing_type, prices_data, prices_text):
             status = "aehnlich wie BTC"
         altcoin_lines.append(f"{sym}: {format_price(price)} ({chg:+.1f}%) - {status}")
 
-    oil_str = f"${oil_price}" if oil_price else "nicht verfuegbar"
-    if oil_price and oil_change:
-        oil_str = f"${oil_price} ({oil_change:+.1f}%)"
+    oil_str = "nicht verfuegbar"
+    if oil_price:
+        oil_chg_str = f" ({oil_change:+.1f}%)" if oil_change is not None else ""
+        oil_str = f"${oil_price}{oil_chg_str}"
 
     fg_str = f"{fg_value}/100 ({fg_label})" if fg_value else "nicht verfuegbar"
     dom_str = f"{btc_dom}%" if btc_dom else "nicht verfuegbar"
@@ -336,30 +398,28 @@ async def generate_briefing_msg2(briefing_type, prices_data):
             calendar_lines.append(f"{e['date'][:10]} - {e['event']}{actual}{forecast}")
         calendar_text = "\n".join(calendar_lines)
 
-    tranche_text = ""
-    if tranchen:
-        tranche_text = "\n".join([f"- {t['coin']}: Ziel ${t['zielpreis']}" for t in tranchen])
+    tranche_text = "\n".join([f"- {t['coin']}: Ziel ${t['zielpreis']}" for t in tranchen]) if tranchen else "Keine"
 
     prompt = f"""Erstelle Nachricht 2 des {briefing_type} fuer Johanna. Heute: {heute}
 
 NEWS:
 {chr(10).join(news_summaries)}
 
-WIRTSCHAFTSKALENDER (naechste 2 Tage):
+WIRTSCHAFTSKALENDER:
 {calendar_text if calendar_text else "Keine wichtigen Termine"}
 
 HKCM-ANALYSEN:
-{analysen_text[:1000] if analysen_text else "Keine gespeichert"}
+{analysen_text[:800] if analysen_text else "Keine gespeichert"}
 
 AKTIVE TRANCHEN:
-{tranche_text if tranche_text else "Keine"}
+{tranche_text}
 
 Formatiere so:
 
 TOP NEWS
 
 1. [Titel]
-[4-5 Saetze Zusammenfassung was passiert ist und warum das wichtig ist]
+[4-5 Saetze was passiert ist und warum wichtig]
 Bedeutung fuer Crypto: [1 Satz]
 Quelle: [Name] | [Link]
 
@@ -368,20 +428,34 @@ Quelle: [Name] | [Link]
 3. [gleich]
 
 WIRTSCHAFTSKALENDER
-[Wenn wichtige Termine morgen/uebermorgen: Vorwarnung mit Erklaerung was der Termin bedeutet]
-[Wenn heute Ergebnis vorliegt: Was war das Ergebnis und was bedeutet es fuer Crypto]
-[Wenn keine Termine: kurz erwaehnen]
+[Vorwarnungen fuer morgen/uebermorgen mit Erklaerung was der Termin bedeutet]
+[Heutige Ergebnisse mit Bedeutung fuer Crypto]
 
 HKCM-CHECK
-[Welche Coins naehern sich laut Analysen einer Kauf- oder Verkaufszone?]
+[Welche Coins naehern sich Kauf- oder Verkaufszonen?]
 
 HANDLUNGSHINWEISE
-[2-3 konkrete Punkte was heute relevant sein koennte]
+[2-3 konkrete Punkte]
 
 Max 400 Woerter. Auf Deutsch."""
 
-    system = "Du bist Johannas Crypto-Assistent. Informiere detailliert aber verstaendlich auf Deutsch."
+    system = "Du bist Johannas Crypto-Assistent. Informiere detailliert aber verstaendlich."
     return ask_ai(system, prompt)
+
+def generate_lernkarte_msg(karte):
+    save_lernkarte(karte["begriff"])
+    return f"""LERNKARTE DES TAGES
+
+Begriff: {karte['begriff']}
+Kategorie: {karte['kategorie']}
+
+Was ist das?
+{karte['erklaerung']}
+
+Beispiel:
+{karte['beispiel']}
+
+Teste dich morgen mit /quiz!"""
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -391,6 +465,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/mittag - Mittags-Briefing\n"
         "/abend - Abend-Briefing\n"
         "/makro - Makro-Update mit News\n"
+        "/lernkarte - Begriff des Tages\n"
+        "/quiz - Teste dein Wissen\n"
         "/tranche BTC 75000 500 - Tranche anlegen\n"
         "/tranchen - Alle Tranchen\n"
         "/analysen - HKCM-Analysen\n\n"
@@ -406,6 +482,37 @@ async def preise(update: Update, context: ContextTypes.DEFAULT_TYPE):
         now = datetime.utcnow()
         text += f"\n\nStand: {now.strftime('%H:%M')} UTC"
         await update.message.reply_text(text)
+    except Exception as e:
+        await update.message.reply_text(f"Fehler: {e}")
+
+async def lernkarte_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        karte = get_lernkarte_des_tages()
+        msg = generate_lernkarte_msg(karte)
+        await update.message.reply_text(msg)
+    except Exception as e:
+        await update.message.reply_text(f"Fehler: {e}")
+
+async def quiz_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        result = supabase_get("Lernkarten", "?order=id.desc&limit=5")
+        if not isinstance(result, list) or not result:
+            await update.message.reply_text("Noch keine Lernkarten. Starte mit /lernkarte!")
+            return
+
+        import random
+        letzter_begriff = result[0].get("begriff", "")
+        karte = next((k for k in LERNKARTEN if k["begriff"] == letzter_begriff), None)
+        if not karte:
+            karte = random.choice(LERNKARTEN)
+
+        pending_quiz[str(update.effective_chat.id)] = karte["richtig"]
+
+        msg = f"QUIZ\n\n{karte['frage']}\n\n"
+        for a in karte["antworten"]:
+            msg += f"{a}\n"
+        msg += "\nAntworte mit A, B oder C!"
+        await update.message.reply_text(msg)
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
@@ -428,23 +535,23 @@ async def makro_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif fg_value <= 55:
                 fg_erkl = "Neutral - keine klare Richtung"
             elif fg_value <= 75:
-                fg_erkl = "Gier - Markt laeuft gut, Vorsicht bei Einstiegen"
+                fg_erkl = "Gier - Markt laeuft gut, Vorsicht"
             else:
-                fg_erkl = "Extreme Gier - Markt ueberhitzt, Ruecksetzer moeglich"
+                fg_erkl = "Extreme Gier - Markt ueberhitzt"
             lines.append(f"Fear & Greed: {fg_value}/100 ({fg_label})\n-> {fg_erkl}\n")
 
         if btc_dom is not None:
             if btc_dom > 55:
-                dom_erkl = "Bitcoin Season - Altcoins verlieren, Kapital fliesst in BTC"
+                dom_erkl = "Bitcoin Season - Altcoins verlieren"
             elif btc_dom > 45:
-                dom_erkl = "Ausgeglichen - kein klarer Trend"
+                dom_erkl = "Ausgeglichen"
             else:
-                dom_erkl = "Altcoin Season moeglich - Kapital rotiert von BTC in Altcoins"
+                dom_erkl = "Altcoin Season moeglich"
             lines.append(f"BTC Dominanz: {btc_dom}%\n-> {dom_erkl}\n")
 
         if oil_price:
             oil_chg_str = f" ({oil_change:+.1f}%)" if oil_change is not None else ""
-            oil_erkl = "Hoher Oelpreis signalisiert geopolitische Spannung - oft negativ fuer Risk-Assets" if oil_price > 85 else "Oelpreis stabil - kein Stresssignal"
+            oil_erkl = "Geopolitische Spannung - negativ fuer Risk-Assets" if oil_price > 85 else "Stabil"
             lines.append(f"Oelpreis: ${oil_price}{oil_chg_str}\n-> {oil_erkl}\n")
 
         if calendar:
@@ -469,8 +576,11 @@ async def mittag_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         prices_text = format_prices_text(data)
         msg1 = await generate_briefing_msg1("Mittags-Briefing", data, prices_text)
         msg2 = await generate_briefing_msg2("Mittags-Briefing", data)
+        karte = get_lernkarte_des_tages()
+        msg3 = generate_lernkarte_msg(karte)
         await update.message.reply_text(msg1, disable_web_page_preview=True)
         await update.message.reply_text(msg2, disable_web_page_preview=True)
+        await update.message.reply_text(msg3)
     except Exception as e:
         await update.message.reply_text(f"Fehler: {e}")
 
@@ -489,7 +599,7 @@ async def abend_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def tranche_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     if len(args) != 3:
-        await update.message.reply_text("Format: /tranche BTC 75000 500\n(Coin, Zielpreis USD, Betrag EUR)")
+        await update.message.reply_text("Format: /tranche BTC 75000 500")
         return
     coin, zielpreis, betrag = args[0].upper(), args[1], args[2]
     save_tranche(coin, zielpreis, betrag)
@@ -499,7 +609,7 @@ async def tranchen_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         tranchen = get_tranchen()
         if not tranchen:
-            await update.message.reply_text("Noch keine Tranchen. Mit /tranche BTC 75000 500 anlegen.")
+            await update.message.reply_text("Noch keine Tranchen.")
             return
         data = await get_prices()
         lines = ["Deine aktiven Tranchen\n"]
@@ -541,30 +651,40 @@ async def image_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         image_base64 = base64.b64encode(img_bytes).decode("utf-8")
         data = await get_prices()
         prices_text = format_prices_text(data)
-        user_prompt = f"""Das ist ein Screenshot einer HKCM Krypto-Analyse.
-Extrahiere folgende Infos strukturiert:
-- Coin (Name und Symbol)
-- Datum der Analyse
-- Primaerszenario
-- Alternativszenario
-- Unterstuetzungen (Preise)
-- Widerstaende (Preise)
-- Handelsmoeglichkeiten (konkrete Einstiegszonen falls vorhanden)
-Dann: kurze Einschaetzung basierend auf aktuellem Kurs.
-Aktuelle Kurse:
-{prices_text}"""
-        system = "Du bist Johannas Crypto-Assistent. Analysiere HKCM-Screenshots strukturiert auf Deutsch."
+        user_prompt = f"""HKCM Krypto-Analyse Screenshot. Extrahiere:
+- Coin, Datum, Primaerszenario, Alternativszenario
+- Unterstuetzungen, Widerstaende, Handelszonen
+Einschaetzung basierend auf aktuellem Kurs.
+Kurse: {prices_text}"""
+        system = "Du bist Johannas Crypto-Assistent. Analysiere HKCM-Screenshots auf Deutsch."
         reply = ask_ai_with_image(system, user_prompt, image_base64)
-        coin_extract_prompt = f"Welcher Coin-Symbol wird in diesem Text analysiert? Antworte nur mit dem Symbol: {reply[:200]}"
-        coin_symbol = ask_ai("Antworte nur mit dem Coin-Symbol.", coin_extract_prompt).strip().upper()
+        coin_symbol = ask_ai("Nur Coin-Symbol antworten.", f"Welcher Coin wird analysiert? {reply[:200]}").strip().upper()
         save_analyse(coin_symbol, reply)
         await update.message.reply_text(reply)
         await update.message.reply_text(f"Analyse fuer {coin_symbol} gespeichert!")
     except Exception as e:
-        await update.message.reply_text(f"Fehler beim Bildlesen: {e}")
+        await update.message.reply_text(f"Fehler: {e}")
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
+    chat_id = str(update.effective_chat.id)
+
+    if chat_id in pending_quiz:
+        richtige_antwort = pending_quiz.pop(chat_id)
+        antwort = text.strip().upper()
+        result = supabase_get("Lernkarten", "?order=id.desc&limit=1")
+        letzter_begriff = result[0].get("begriff", "") if isinstance(result, list) and result else ""
+
+        if antwort == richtige_antwort:
+            update_lernkarte_score(letzter_begriff, True)
+            await update.message.reply_text(f"Richtig! Super! Die Antwort {richtige_antwort} ist korrekt.")
+        else:
+            update_lernkarte_score(letzter_begriff, False)
+            karte = next((k for k in LERNKARTEN if k["begriff"] == letzter_begriff), None)
+            erkl = karte["erklaerung"] if karte else ""
+            await update.message.reply_text(f"Leider falsch. Richtig waere {richtige_antwort}.\n\n{erkl}\n\nNicht aufgeben - beim naechsten Mal klappt es!")
+        return
+
     await update.message.reply_text("Denke nach...")
     try:
         data = await get_prices()
@@ -574,18 +694,16 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tranche_text = "\n".join([f"- {t['coin']}: Ziel ${t['zielpreis']}" for t in tranchen]) if tranchen else ""
 
         if "HKCM" in text.upper():
-            coin_extract_prompt = f"Welcher Coin-Symbol wird in diesem Text analysiert? Antworte nur mit dem Symbol: {text[:300]}"
-            coin_symbol = ask_ai("Antworte nur mit dem Coin-Symbol.", coin_extract_prompt).strip().upper()
+            coin_symbol = ask_ai("Nur Coin-Symbol.", f"Welcher Coin wird analysiert? {text[:300]}").strip().upper()
             save_analyse(coin_symbol, text)
             await update.message.reply_text(f"Analyse fuer {coin_symbol} gespeichert!")
             return
 
-        system = f"""Du bist Johannas persoenlicher Crypto-Assistent. Sie ist Bauzeichnerin und investiert nebenberuflich in Krypto.
-Ihre Coins: BTC, ETH, XRP, ADA, LTC, AVAX, HBAR, CRO, POL, RENDER, VET, FET, MANA, LINK.
-Aktuelle Preise:
-{prices_text}
-{f'Aktive Tranchen:{chr(10)}{tranche_text}' if tranche_text else ''}
-{f'Gespeicherte HKCM-Analysen:{chr(10)}{analysen_text}' if analysen_text else ''}
+        system = f"""Du bist Johannas persoenlicher Crypto-Assistent.
+Coins: BTC ETH XRP ADA LTC AVAX HBAR CRO POL RENDER VET FET MANA LINK
+Preise: {prices_text}
+{f'Tranchen:{chr(10)}{tranche_text}' if tranche_text else ''}
+{f'HKCM-Analysen:{chr(10)}{analysen_text}' if analysen_text else ''}
 Antworte auf Deutsch. Kurz, direkt, klar."""
 
         reply = ask_ai(system, text)
@@ -603,6 +721,10 @@ async def auto_briefing(context: ContextTypes.DEFAULT_TYPE):
         msg2 = await generate_briefing_msg2(briefing_type, data)
         await context.bot.send_message(chat_id=CHAT_ID, text=msg1, disable_web_page_preview=True)
         await context.bot.send_message(chat_id=CHAT_ID, text=msg2, disable_web_page_preview=True)
+        if hour == 10:
+            karte = get_lernkarte_des_tages()
+            msg3 = generate_lernkarte_msg(karte)
+            await context.bot.send_message(chat_id=CHAT_ID, text=msg3)
     except Exception as e:
         await context.bot.send_message(chat_id=CHAT_ID, text=f"Fehler: {e}")
 
@@ -634,6 +756,8 @@ def main():
     app.add_handler(CommandHandler("mittag", mittag_cmd))
     app.add_handler(CommandHandler("abend", abend_cmd))
     app.add_handler(CommandHandler("makro", makro_cmd))
+    app.add_handler(CommandHandler("lernkarte", lernkarte_cmd))
+    app.add_handler(CommandHandler("quiz", quiz_cmd))
     app.add_handler(CommandHandler("tranche", tranche_cmd))
     app.add_handler(CommandHandler("tranchen", tranchen_cmd))
     app.add_handler(CommandHandler("analysen", analysen_cmd))
