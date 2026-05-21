@@ -228,13 +228,16 @@ def get_btc_dominance():
 
 def get_oil_price():
     try:
-        r = requests.get(f"https://finnhub.io/api/v1/quote?symbol=USOIL&token={FINNHUB_KEY}", timeout=10)
+        r = requests.get(
+            "https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d",
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=10
+        )
         data = r.json()
-        price = data.get("c")
-        change = data.get("dp")
-        if price and float(price) > 0:
-            return round(float(price), 2), round(float(change), 2) if change else None
-        return None, None
+        price = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
+        prev = data["chart"]["result"][0]["meta"]["chartPreviousClose"]
+        change = ((price - prev) / prev * 100) if prev else None
+        return round(float(price), 2), round(float(change), 2) if change else None
     except:
         return None, None
 
